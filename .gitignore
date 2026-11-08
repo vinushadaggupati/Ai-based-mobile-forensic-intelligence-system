@@ -30,3 +30,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+venv/
+
+# Forensic Data & Generated Outputs
+database/*.db
+database/*.db-wal
+database/*.db-shm
+evidence_storage/
+working_copies/
+generated_reports/

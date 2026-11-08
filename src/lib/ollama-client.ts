@@ -1,5 +1,6 @@
-// Ollama Local AI Client for Mobile Forensic Intelligence
+// Ollama Local AI Client for Android Mobile Forensic Intelligence System
 // Integrates local LLM (llama3.2:3b) via Ollama REST API (http://127.0.0.1:11434)
+// AI-generated findings are clearly categorized and distinguished from confirmed evidence.
 
 export interface OllamaStatus {
   connected: boolean;
@@ -13,10 +14,19 @@ export interface OllamaStatus {
 export interface OllamaFinding {
   id: string;
   priority: "high" | "medium" | "low";
-  category: "Communication" | "Location" | "Application" | "Browser" | "Pattern" | "Anti-Forensics";
+  category:
+    | "Communication"
+    | "Location"
+    | "Application"
+    | "Browser"
+    | "Pattern"
+    | "Anti-Forensics"
+    | "Media"
+    | "Contact";
   title: string;
   evidenceIds: string[];
   rationale: string;
+  findingType: "confirmed-evidence" | "ai-observation" | "possible-lead";
 }
 
 export interface OllamaAnalysisResult {
@@ -26,12 +36,16 @@ export interface OllamaAnalysisResult {
   findings: OllamaFinding[];
   antiForensicAnalysis: string;
   timelineReconstruction: string;
+  riskAssessment: string;
+  recommendations: string[];
   stats: { high: number; medium: number; low: number };
   durationMs: number;
 }
 
 export const DEFAULT_OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
 export const DEFAULT_MODEL = "llama3.2:3b";
+
+// ─── CONNECTION CHECK ────────────────────────────────────────────────────────
 
 export async function checkOllamaConnection(
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
@@ -85,6 +99,8 @@ export async function checkOllamaConnection(
   }
 }
 
+// ─── STREAMING GENERATION ────────────────────────────────────────────────────
+
 export async function generateOllamaStream(
   prompt: string,
   options: {
@@ -106,7 +122,7 @@ export async function generateOllamaStream(
       prompt,
       system:
         options.system ||
-        "You are an expert digital forensics examiner specializing in mobile device intelligence, The Sleuth Kit / Autopsy artifact correlation, and anti-forensics detection. Provide objective, precise, court-admissible forensic insights.",
+        "You are an expert digital forensics examiner specializing in Android mobile device intelligence. Analyze the provided forensic evidence objectively. Clearly distinguish between confirmed evidence and AI-generated observations. Provide precise, professional forensic insights suitable for investigation reports.",
       stream: true,
     }),
     signal: options.signal,
@@ -147,6 +163,8 @@ export async function generateOllamaStream(
   return fullText;
 }
 
+// ─── FORENSIC LLM ANALYSIS ──────────────────────────────────────────────────
+
 export interface ForensicPayload {
   caseInfo: { caseNumber: string; title: string; investigator: string };
   devices: { model: string; os: string; serial: string; acquisitionMethod: string }[];
@@ -184,9 +202,9 @@ export async function runForensicLLMAnalysis(
   const prompt = `
 CASE FILE: ${payload.caseInfo.caseNumber} - ${payload.caseInfo.title}
 INVESTIGATOR: ${payload.caseInfo.investigator}
-TARGET DEVICES: ${JSON.stringify(payload.devices.map((d) => ({ model: d.model, os: d.os, serial: d.serial, method: d.acquisitionMethod })))}
+TARGET DEVICES (Android Only): ${JSON.stringify(payload.devices.map((d) => ({ model: d.model, os: d.os, serial: d.serial, method: d.acquisitionMethod })))}
 
-AUTOPSY 4.23.1 RECOVERED / CARVED DELETED EVIDENCE (CARVED FROM FREELISTS & UNALLOCATED SPACE):
+AUTOPSY RECOVERED / CARVED DELETED EVIDENCE:
 ${JSON.stringify(payload.autopsyCarved, null, 2)}
 
 ACTIVE FORENSIC ARTIFACTS:
@@ -197,25 +215,32 @@ ACTIVE FORENSIC ARTIFACTS:
 - Installed Applications: ${JSON.stringify(payload.apps)}
 
 FORENSIC EXAMINER INSTRUCTIONS:
-Conduct an intelligence analysis correlating the active artifacts with the DELETED items recovered by Autopsy.
-Specifically highlight:
-1. Anti-forensic intent (e.g., deleting logs, installing shredder apps, searching wiping guides).
-2. Correlation between recovered deleted SMS/chat and suspect GPS movements (Ocean Beach rendezvous, SFO Airport terminal).
-3. Assign priority ("high", "medium", "low") to key findings.
+Conduct an intelligence analysis correlating the active artifacts with the recovered deleted items.
+Highlight:
+1. Anti-forensic intent (deleting logs, installing shredder apps, searching wiping guides).
+2. Correlation between recovered deleted SMS/chat and GPS movements.
+3. Suspicious communication patterns.
+4. Assign priority ("high", "medium", "low") to findings.
+5. Categorize each finding as "confirmed-evidence", "ai-observation", or "possible-lead".
 
-Return your response strictly in valid JSON format matching this schema:
+IMPORTANT: AI observations must NOT be treated as confirmed forensic facts.
+
+Return your response strictly in valid JSON format:
 {
-  "summary": "Multi-paragraph narrative investigative summary detailing timeline, motive, evidence destruction, and crypto transactions.",
-  "antiForensicAnalysis": "Specific analysis of suspect's attempts to evade detection and destroy evidence, referencing Autopsy carved items.",
-  "timelineReconstruction": "Chronological synthesis connecting GPS locations, deleted messages, and calls.",
+  "summary": "Multi-paragraph narrative summary",
+  "antiForensicAnalysis": "Analysis of evidence destruction attempts",
+  "timelineReconstruction": "Chronological timeline synthesis",
+  "riskAssessment": "Overall risk assessment with justification",
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
   "findings": [
     {
       "id": "f-1",
       "priority": "high",
       "category": "Anti-Forensics",
-      "title": "Concise headline describing the finding",
-      "evidenceIds": ["CARVED-SMS-01", "a5", "b1"],
-      "rationale": "Detailed forensic reasoning explaining why this is critical."
+      "title": "Finding headline",
+      "evidenceIds": ["s1", "a5"],
+      "rationale": "Detailed reasoning",
+      "findingType": "confirmed-evidence"
     }
   ]
 }
@@ -226,7 +251,7 @@ Return your response strictly in valid JSON format matching this schema:
       endpoint,
       model,
       onToken: () => {
-        config.onProgress?.("Synthesizing neural forensic correlation…");
+        config.onProgress?.("Synthesizing forensic analysis…");
       },
     });
 
@@ -245,19 +270,27 @@ Return your response strictly in valid JSON format matching this schema:
       title?: string;
       evidenceIds?: string[];
       rationale?: string;
+      findingType?: string;
     }[];
+
+    const validFindingTypes = ["confirmed-evidence", "ai-observation", "possible-lead"];
 
     const findings: OllamaFinding[] = rawFindings.map((f, idx) => ({
       id: f.id || `f-${idx + 1}`,
       priority: (["high", "medium", "low"].includes(f.priority || "") ? f.priority : "medium") as
-        "high" | "medium" | "low",
+        | "high"
+        | "medium"
+        | "low",
       category: (f.category as OllamaFinding["category"]) || "Pattern",
       title: f.title || "Forensic Finding",
       evidenceIds: Array.isArray(f.evidenceIds) ? f.evidenceIds : [],
       rationale: f.rationale || "",
+      findingType: (
+        validFindingTypes.includes(f.findingType || "") ? f.findingType : "ai-observation"
+      ) as OllamaFinding["findingType"],
     }));
 
-    // Deterministic sort: high -> medium -> low
+    // Sort: high -> medium -> low
     const order = { high: 0, medium: 1, low: 2 };
     findings.sort((a, b) => order[a.priority] - order[b.priority]);
 
@@ -273,19 +306,26 @@ Return your response strictly in valid JSON format matching this schema:
       summary: parsed.summary || rawResponse.slice(0, 500),
       findings,
       antiForensicAnalysis:
-        parsed.antiForensicAnalysis ||
-        "Anti-forensic analysis compiled from Autopsy carved artifacts.",
+        parsed.antiForensicAnalysis || "Analysis compiled from forensic artifacts.",
       timelineReconstruction:
-        parsed.timelineReconstruction ||
-        "Timeline correlated across GPS telemetry and carved communication records.",
+        parsed.timelineReconstruction || "Timeline correlated across GPS and communication records.",
+      riskAssessment: parsed.riskAssessment || "Risk assessment pending full analysis.",
+      recommendations: Array.isArray(parsed.recommendations)
+        ? parsed.recommendations
+        : [
+            "Continue monitoring suspect communications",
+            "Preserve all evidence with chain of custody",
+          ],
       stats,
       durationMs: Math.round(performance.now() - startTime),
     };
   } catch (err) {
-    console.warn("Ollama inference error, falling back to deterministic heuristic engine:", err);
+    console.warn("Ollama inference error, falling back to heuristic engine:", err);
     return fallbackHeuristicAnalysis(payload, startTime);
   }
 }
+
+// ─── FALLBACK HEURISTIC ANALYSIS (when Ollama is offline) ────────────────────
 
 function fallbackHeuristicAnalysis(
   payload: ForensicPayload,
@@ -297,65 +337,80 @@ function fallbackHeuristicAnalysis(
       id: "f-autopsy-carved-sms",
       priority: "high",
       category: "Anti-Forensics",
-      title: `${carvedCount} deleted evidence items recovered by Autopsy 4.23.1`,
+      title: `${carvedCount} deleted evidence items recovered by Autopsy forensic analysis`,
       evidenceIds: ["CARVED-SMS-01", "CARVED-SMS-02", "CARVED-CHAT-01"],
       rationale:
-        "Autopsy carved messages from mmssms.db freelist and WhatsApp WAL journal: 'burn the phone after' and 'delete the logs and wipe the sd card'. These explicitly confirm deliberate intent to destroy evidentiary artifacts.",
+        "Autopsy carved messages from mmssms.db freelist and WhatsApp WAL journal containing explicit references to evidence destruction ('burn the phone after', 'delete the logs and wipe the sd card').",
+      findingType: "confirmed-evidence",
     },
     {
       id: "f-anti-forensics-suite",
       priority: "high",
       category: "Application",
-      title: "Anti-forensic wiping applications and Tor network deployed",
+      title: "Anti-forensic wiping applications and Tor network deployed on Android device",
       evidenceIds: ["a3", "a4", "a5", "b1"],
       rationale:
         "iShredder, Wickr Me, and Orbot were installed within the same 72h window, accompanied by active searches on how to wipe Android securely and darknet mixers.",
+      findingType: "confirmed-evidence",
     },
     {
-      id: "f-crypto-transfer-oceanbeach",
+      id: "f-crypto-transfer",
       priority: "high",
       category: "Communication",
-      title: "Recovered 1.2 BTC cold storage transfer & Ocean Beach rendezvous",
+      title: "Cryptocurrency transfer instructions and cold storage activity",
       evidenceIds: ["CARVED-CHAT-01", "CARVED-IMG-01", "g3", "s4"],
       rationale:
-        "Autopsy WAL recovery unmasked deleted WhatsApp message detailing 1.2 BTC transfer to cold wallet at Ocean Beach Lot 4 at 02:29 UTC. Carved photo and GPS telemetry confirm physical presence at 02:35 UTC.",
+        "Recovered deleted messages detail BTC transfer to cold wallet at Ocean Beach Lot 4. Carved photo and GPS telemetry confirm physical presence at the location.",
+      findingType: "confirmed-evidence",
     },
     {
-      id: "f-flight-escape-sfo",
+      id: "f-flight-risk",
       priority: "high",
       category: "Location",
-      title: "Immediate exit strategy: carved boarding pass at SFO Airport Terminal 2",
+      title: "Potential flight risk: device detected at SFO Airport Terminal 2",
       evidenceIds: ["CARVED-IMG-02", "g4"],
       rationale:
-        "Autopsy TSK carved deleted image showing Heathrow departure boarding pass at SFO Airport at 04:15 UTC, matching subject's GPS movement to SFO Terminal 2.",
+        "Autopsy carved deleted image showing international departure boarding pass at SFO Airport, matching GPS movement to SFO Terminal 2.",
+      findingType: "possible-lead",
     },
     {
       id: "f-night-communications",
       priority: "medium",
       category: "Pattern",
       title: "Unusual late-night call cluster with foreign +44 and +7 contacts",
-      evidenceIds: ["c2", "c3", "s4"],
+      evidenceIds: ["c2", "c3", "s4", "s8"],
       rationale:
-        "Off-hours international communication synchronized with the cryptocurrency transfer timeline.",
+        "Off-hours international communication with numbers not in contacts, synchronized with the cryptocurrency transfer timeline.",
+      findingType: "ai-observation",
     },
     {
       id: "f-routine-data",
       priority: "low",
       category: "Communication",
-      title: "Routine domestic baseline records",
+      title: "Routine domestic baseline records (non-suspicious)",
       evidenceIds: ["s3", "s5", "c4"],
       rationale:
-        "Standard family contacts and banking 2FA alerts indicating standard personal device usage prior to illicit activity.",
+        "Standard family contacts and banking 2FA alerts indicating normal personal device usage. Provides behavioral baseline.",
+      findingType: "confirmed-evidence",
     },
   ];
 
+  const caseNum = payload.caseInfo?.caseNumber || "MFIS-2026-0042";
+
   const summary = [
-    `INVESTIGATIVE CONCLUSION — CASE ${payload.caseInfo?.caseNumber || "FIS-2026-0417"}:`,
-    `Forensic examination of mobile device images processed via Autopsy 4.23.1 and correlated through local AI intelligence confirms a premeditated data exfiltration and evidence destruction operation.`,
-    `1. EVIDENCE DESTRUCTION & ANTI-FORENSICS: Autopsy SQLite Freelist and WAL Carving successfully recovered deleted SMS ('burn the phone after') and WhatsApp communications ('delete the logs and wipe the sd card'). The installation of iShredder and Tor coincides directly with searches for Android wiping methodologies.`,
-    `2. ILLICIT ASSET TRANSFER: Carved records reveal instructions to transfer 1.2 BTC to cold wallet storage, followed by physical travel to Ocean Beach Lot 4 and an immediate exit strategy to SFO Airport with a carved international boarding pass.`,
-    `3. INTEGRITY ASSURANCE: All recovered items have been indexed with SHA-256 integrity hashes and physical block offsets for courtroom admissibility under NIST SP 800-101.`,
-  ].join("\n\n");
+    `INVESTIGATIVE ANALYSIS — CASE ${caseNum}:`,
+    `Forensic examination of Android device images processed via Autopsy and correlated through forensic heuristic analysis reveals a premeditated data exfiltration and evidence destruction operation.`,
+    ``,
+    `1. EVIDENCE DESTRUCTION & ANTI-FORENSICS: Autopsy SQLite Freelist and WAL Carving successfully recovered deleted SMS ('burn the phone after') and WhatsApp communications ('delete the logs and wipe the sd card'). The installation of iShredder, Tor, and Wickr coincides with searches for Android wiping methodologies.`,
+    ``,
+    `2. CRYPTOCURRENCY ACTIVITY: Communications reference BTC transfers to cold wallet storage, followed by physical travel to Ocean Beach Lot 4. Exodus crypto wallet installed on device.`,
+    ``,
+    `3. FLIGHT RISK INDICATORS: GPS shows movement to SFO Airport Terminal 2, with carved boarding pass evidence suggesting international departure plans.`,
+    ``,
+    `4. INTEGRITY ASSURANCE: All evidence items have been indexed with SHA-256 integrity hashes for verification.`,
+    ``,
+    `NOTE: This analysis was generated using built-in forensic heuristics (Ollama was offline). For AI-enhanced analysis, ensure Ollama is running with the llama3.2:3b model.`,
+  ].join("\n");
 
   const stats = {
     high: findings.filter((f) => f.priority === "high").length,
@@ -365,13 +420,23 @@ function fallbackHeuristicAnalysis(
 
   return {
     source: "offline-heuristic",
-    modelUsed: "Forensic Heuristic Engine (Autopsy Integrated)",
+    modelUsed: "Forensic Heuristic Engine (Built-in)",
     summary,
     findings,
     antiForensicAnalysis:
-      "Subject executed systematic multi-layer anti-forensics: deleting database records, utilizing secure shredder utilities, and routing through Onion mixers. Autopsy carved unallocated space to recover all key records.",
+      "Subject executed systematic multi-layer anti-forensics: deleting database records, installing secure shredder utilities, and routing through Tor network. Autopsy carved unallocated space to recover key records.",
     timelineReconstruction:
-      "Timeline confirms progression from initial planning (July 21-22) to asset transfer and beach rendezvous (July 24 02:30 UTC), followed by attempted flight departure from SFO (July 24 04:15 UTC).",
+      "Timeline shows progression from initial planning to asset transfer and physical rendezvous, followed by attempted departure from SFO Airport.",
+    riskAssessment:
+      "CRITICAL — Multiple high-priority indicators of evidence destruction, illicit asset transfer, and flight risk detected across the Android device evidence.",
+    recommendations: [
+      "Preserve all collected evidence with strict chain of custody procedures",
+      "Cross-reference identified phone numbers with law enforcement databases",
+      "Monitor cryptocurrency wallet addresses identified in communications",
+      "Consider flight risk assessment based on airport GPS and boarding pass evidence",
+      "Run AI-enhanced analysis with Ollama for deeper pattern correlation",
+      "Submit recovered Autopsy evidence for independent forensic verification",
+    ],
     stats,
     durationMs: Math.round(performance.now() - startTime),
   };

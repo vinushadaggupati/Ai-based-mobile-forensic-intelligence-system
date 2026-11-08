@@ -10,16 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiAnalyzerRouteImport } from './routes/ai-analyzer'
 import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as AutopsyRouteImport } from './routes/autopsy'
+import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as EvidenceRouteImport } from './routes/evidence'
+import { Route as ForensicAnalysisRouteImport } from './routes/forensic-analysis'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiAnalyzerRoute = AiAnalyzerRouteImport.update({
+  id: '/ai-analyzer',
+  path: '/ai-analyzer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalysisRoute = AnalysisRouteImport.update({
@@ -32,6 +40,11 @@ const AutopsyRoute = AutopsyRouteImport.update({
   path: '/autopsy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CollectionRoute = CollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevicesRoute = DevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
@@ -40,6 +53,11 @@ const DevicesRoute = DevicesRouteImport.update({
 const EvidenceRoute = EvidenceRouteImport.update({
   id: '/evidence',
   path: '/evidence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForensicAnalysisRoute = ForensicAnalysisRouteImport.update({
+  id: '/forensic-analysis',
+  path: '/forensic-analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportRoute = ReportRouteImport.update({
@@ -55,29 +73,38 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-analyzer': typeof AiAnalyzerRoute
   '/analysis': typeof AnalysisRoute
   '/autopsy': typeof AutopsyRoute
+  '/collection': typeof CollectionRoute
   '/devices': typeof DevicesRoute
   '/evidence': typeof EvidenceRoute
+  '/forensic-analysis': typeof ForensicAnalysisRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-analyzer': typeof AiAnalyzerRoute
   '/analysis': typeof AnalysisRoute
   '/autopsy': typeof AutopsyRoute
+  '/collection': typeof CollectionRoute
   '/devices': typeof DevicesRoute
   '/evidence': typeof EvidenceRoute
+  '/forensic-analysis': typeof ForensicAnalysisRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-analyzer': typeof AiAnalyzerRoute
   '/analysis': typeof AnalysisRoute
   '/autopsy': typeof AutopsyRoute
+  '/collection': typeof CollectionRoute
   '/devices': typeof DevicesRoute
   '/evidence': typeof EvidenceRoute
+  '/forensic-analysis': typeof ForensicAnalysisRoute
   '/report': typeof ReportRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
 }
@@ -85,38 +112,50 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-analyzer'
     | '/analysis'
     | '/autopsy'
+    | '/collection'
     | '/devices'
     | '/evidence'
+    | '/forensic-analysis'
     | '/report'
     | '/sitemap.xml'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-analyzer'
     | '/analysis'
     | '/autopsy'
+    | '/collection'
     | '/devices'
     | '/evidence'
+    | '/forensic-analysis'
     | '/report'
     | '/sitemap.xml'
   id:
     | '__root__'
     | '/'
+    | '/ai-analyzer'
     | '/analysis'
     | '/autopsy'
+    | '/collection'
     | '/devices'
     | '/evidence'
+    | '/forensic-analysis'
     | '/report'
     | '/sitemap.xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiAnalyzerRoute: typeof AiAnalyzerRoute
   AnalysisRoute: typeof AnalysisRoute
   AutopsyRoute: typeof AutopsyRoute
+  CollectionRoute: typeof CollectionRoute
   DevicesRoute: typeof DevicesRoute
   EvidenceRoute: typeof EvidenceRoute
+  ForensicAnalysisRoute: typeof ForensicAnalysisRoute
   ReportRoute: typeof ReportRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
@@ -128,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-analyzer': {
+      id: '/ai-analyzer'
+      path: '/ai-analyzer'
+      fullPath: '/ai-analyzer'
+      preLoaderRoute: typeof AiAnalyzerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analysis': {
@@ -144,6 +190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AutopsyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/collection': {
+      id: '/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/devices': {
       id: '/devices'
       path: '/devices'
@@ -156,6 +209,13 @@ declare module '@tanstack/react-router' {
       path: '/evidence'
       fullPath: '/evidence'
       preLoaderRoute: typeof EvidenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forensic-analysis': {
+      id: '/forensic-analysis'
+      path: '/forensic-analysis'
+      fullPath: '/forensic-analysis'
+      preLoaderRoute: typeof ForensicAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/report': {
@@ -177,10 +237,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiAnalyzerRoute: AiAnalyzerRoute,
   AnalysisRoute: AnalysisRoute,
   AutopsyRoute: AutopsyRoute,
+  CollectionRoute: CollectionRoute,
   DevicesRoute: DevicesRoute,
   EvidenceRoute: EvidenceRoute,
+  ForensicAnalysisRoute: ForensicAnalysisRoute,
   ReportRoute: ReportRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
